@@ -25,7 +25,6 @@ def cos_approx(x, accuracy=10):
     return stack
 
 
-
 # Will only run if this is run from command line as opposed to imported
 if __name__ == '__main__':  # main code block
     print("cos(0) = ", cos_approx(0))
