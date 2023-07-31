@@ -21,11 +21,17 @@ if __name__ == '__main__':
     infilename = filename
     
     png = save2png(infilename, var_name)
+
+    command_arguments = sys.argv[1:]
+    
+    for ii in range(len(command_arguments)):
+        var_name = 'tec'
+        
+        infilename = sys.argv[1:ii]
+        
+        png = save2png(infilename, var_name)
     
     
-
-# python_tec_plot.py wfs.t06z.ipe05.20230726_105500.nc
-
-# sys.argv[1]
+    
 
 
