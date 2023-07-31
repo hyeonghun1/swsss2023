@@ -3,6 +3,8 @@
 """
 Created on Mon Jul 31 15:17:17 2023
 
+Integration over the atmosphere (going up the altitude)
+
 @author: hyeonghun
 """
 
@@ -47,6 +49,6 @@ for ii in range(len(alt)-1):
 
 plt.plot(alt, np.log(n))
 plt.xlabel('Altitude [km]')
-plt.ylabel('n')
+plt.ylabel('log(n)')
 
 plt.show()
