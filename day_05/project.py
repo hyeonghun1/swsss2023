@@ -32,22 +32,29 @@ header_label = ['GPS Time (sec)','Geodetic Altitude (km)','Geodetic Latitude (de
                 'Density_Eric (kg/m^3)','Proj_Area_New (m^2)','CD_New (~)','Density_New (kg/m^3)',
                 'Density_HASDM (kg/m^3)','Density_JB2008 (kg/m^3)']
 
+df_all = []
+JB2008_hour_all = []
 
-df = pd.read_csv(Champ_data[2], delim_whitespace=True, header=None, skiprows=1)
-df.columns = header_label
-df.head()
-
- 
-hourly_index = np.where(df['GPS Time (sec)'] % 3600 == 0)[0]
-df_hour = df.iloc[hourly_index]
-
-JB2008_hour = df_hour.loc[:,"Density_JB2008 (kg/m^3)"]
+for i in range(len(Champ_data)):
+    df = pd.read_csv(Champ_data[i], delim_whitespace=True, header=None, skiprows=1)
+    df.columns = header_label
+    df.head()    
+    
+    hourly_index = np.where(df['GPS Time (sec)'] % 3600 == 0)[0]
+    
+    df_hour = df.iloc[hourly_index]
+    
+    df_all.append(df_hour)
+    
+    JB2008_hour = df_hour.loc[:,["Local Solar Time (hours)", "Geodetic Altitude (km)", "Geodetic Latitude (deg)"]]
+    
+    JB2008_hour_all.append(JB2008_hour)
 
 
 #%%
 # Import required packages
 from scipy.io import loadmat
-import matplotlib.pyplot as plt
+
 
 dir_density_Jb2008 = '/Users/hyeonghun/Desktop/Data/JB2008/2002_JB2008_density.mat'
 
@@ -79,8 +86,8 @@ time_array_JB2008 = hourly_index
 
 # For the dataset that we will be working with today, you will need to reshape 
 # them to be lst x lat x altitude
-JB2008_dens_reshaped = np.reshape(JB2008_dens,(nofLst_JB2008,nofLat_JB2008,
-                                               nofAlt_JB2008,8760), order='F')
+JB2008_dens_reshaped = np.reshape(JB2008_dens,(nofLst_JB2008, nofLat_JB2008,
+                                               nofAlt_JB2008, 8760), order='F')
 
 #%%
 """
@@ -91,26 +98,106 @@ Data Interpolation (3D)
 from scipy.interpolate import RegularGridInterpolator
 
 
-# Generate 3D-Interpolant (interpolating function)
-JB2008_interp = RegularGridInterpolator((localSolarTimes_JB2008, latitudes_JB2008, altitudes_JB2008),
-                                          JB2008_dens_reshaped[:,:,:,time_array_JB2008],
-                                          bounds_error = False, fill_value = None)
+JB2008_interpolated = []
+
+for day in range(len(JB2008_hour_all)):
+    interp_day = []
+    for hour in range(len(JB2008_hour_all[day])):  
+        # Generate 3D-Interpolant every hour
+        JB2008_interp = RegularGridInterpolator((localSolarTimes_JB2008, latitudes_JB2008, altitudes_JB2008),
+                                                 JB2008_dens_reshaped[:,:,:,day*24 + hour],
+                                                 bounds_error = False, fill_value = None)
+    
+        interp_day.append(JB2008_interp((JB2008_hour_all[day].iloc[hour]["Local Solar Time (hours)"],
+                                    JB2008_hour_all[day].iloc[hour]["Geodetic Latitude (deg)"],
+                                    JB2008_hour_all[day].iloc[hour]["Geodetic Altitude (km)"] )))
+        
+    JB2008_interpolated.append(np.array(interp_day))
+    
+JB2008_interpolated = np.array(JB2008_interpolated)
 
 
-# =============================================================================
-# tiegcm_on_JB2008 = np.zeros((len(localSolarTimes_JB2008), len(latitudes_JB2008)))
-# for lst_i in range(len(localSolarTimes_JB2008)):
-#     for lat_j in range(len(latitudes_JB2008)):
-#         tiegcm_on_JB2008[lst_i, lat_j] = tiegcm_function((localSolarTimes_JB2008[lst_i],
-#                                                           latitudes_JB2008[lat_j], 400))
-# 
-# =============================================================================
+# reshape a matrix to a vector
+JB2008_50 = np.reshape(JB2008_interpolated, 50*24)
+
+
+#%% TIE-GCM
+
+# Import required packages
+from scipy.io import loadmat
+import h5py
+
+loaded_data_tiegcm = loaded_data = h5py.File('/Users/hyeonghun/Desktop/Data/TIEGCM/2002_TIEGCM_density.mat')
+
+# This is a HDF5 dataset object, some similarity with a dictionary
+print('Key within dataset:',list(loaded_data.keys()))
+
+tiegcm_dens = (10**np.array(loaded_data['density'])*1000).T # convert from g/cm3 to kg/m3
+altitudes_tiegcm = np.array(loaded_data['altitudes']).flatten()
+latitudes_tiegcm = np.array(loaded_data['latitudes']).flatten()
+localSolarTimes_tiegcm = np.array(loaded_data['localSolarTimes']).flatten()
+nofAlt_tiegcm = altitudes_tiegcm.shape[0]
+nofLst_tiegcm = localSolarTimes_tiegcm.shape[0]
+nofLat_tiegcm = latitudes_tiegcm.shape[0]
+
+# We will be using the same time index as before.
+time_array_tiegcm = time_array_JB2008
+
+tiegcm_dens_reshaped = np.reshape(tiegcm_dens,(nofLst_tiegcm,nofLat_tiegcm,nofAlt_tiegcm,8760), order='F')
+
+
+#%%
+"""
+Data Interpolation (3D)
+
+"""
+# Import required packages
+from scipy.interpolate import RegularGridInterpolator
+
+
+tiegcm_interpolated = []
+
+for day in range(len(tiegcm_hour_all)):
+    inter = []
+    for hour in range(len(tiegcm_hour_all[day])):  
+        # Generate 3D-Interpolant every hour
+        tiegcm_interp = RegularGridInterpolator((localSolarTimes_tiegcm, latitudes_tiegcm, altitudes_tiegcm),
+                                                 tiegcm_dens_reshaped[:,:,:,day*24 + hour],
+                                                 bounds_error = False, fill_value = None)
+    
+        inter.append(tiegcm_interp((tiegcm_hour_all[day].iloc[hour]["Local Solar Time (hours)"],
+                                    tiegcm_hour_all[day].iloc[hour]["Geodetic Latitude (deg)"],
+                                    tiegcm_hour_all[day].iloc[hour]["Geodetic Altitude (km)"] )))
+        
+    tiegcm_interpolated.append(np.array(inter))
+    
+tiegcm_interpolated = np.array(tiegcm_interpolated)
+
+
+# reshape a matrix to a vector
+tiegcm_50 = np.reshape(tiegcm_interpolated, 50*24)
 
 
 
 
 
 
+#%% plot
+import matplotlib.pyplot as plt
+
+fig, axs = plt.subplots(1, figsize = (10, 4))
+cs = plt.plot(JB2008_50)
+axs.set_xlabel('Days', fontsize = 13)
+axs.set_ylabel('JB2008 density', fontsize = 13)
+axs.set_title('Interpolated JB2008 for 50 days', fontsize = 15)
+
+
+
+fig, axs = plt.subplots(1, figsize = (10, 4))
+cs = plt.plot(tiegcm_50)
+axs.set_xlabel('Days', fontsize = 13)
+axs.set_ylabel('JB2008 density', fontsize = 13)
+axs.set_title('Interpolated JB2008 for 50 days', fontsize = 15)
 
 
 
