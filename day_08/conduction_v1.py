@@ -16,15 +16,23 @@ if __name__ == "__main__":
     x = np.arange(-dx, 10 + 2 * dx, dx)
 
     t_lower = 200.0
-    t_upper = 1000.0
+    t_upper = 500.0
 
     nPts = len(x)
 
     # set default coefficients for the solver:
-    a = np.zeros(nPts) - 1
-    b = np.zeros(nPts) + 2
-    c = np.zeros(nPts) - 1
+    a = np.zeros(nPts) + 1
+    b = np.zeros(nPts) - 2
+    c = np.zeros(nPts) + 1
     d = np.zeros(nPts)
+
+    # Add a source term:
+    Q = np.zeros(nPts)
+    Q[(x>3) & (x<7)] = 1500
+    k = 100
+    dz = x[1] - x[0]
+    d = -Q * dz**2 / k
+    
 
     # boundary conditions (bottom - fixed):
     a[0] = 0
@@ -33,12 +41,11 @@ if __name__ == "__main__":
     d[0] = t_lower
 
     # top - fixed:
-    a[-1] = 0
-    b[-1] = 1
+    a[-1] = 1
+    b[-1] = -1
     c[-1] = 0
-    d[-1] = t_upper
+    d[-1] = 0
 
-    # Add a source term:
     
     # solve for Temperature:
     t = solve_tridiagonal(a, b, c, d)
@@ -48,11 +55,14 @@ if __name__ == "__main__":
     ax = fig.add_subplot(111)
 
     ax.plot(x, t)
+    plt.xlabel('Altitude', fontsize = 15)
+    plt.ylabel('Temperature', fontsize = 15)
+    plt.title('Heat Conduction throughout the altitude', fontsize = 18)
 
-    plotfile = 'conduction_v1.png'
-    print('writing : ',plotfile)    
-    fig.savefig(plotfile)
-    plt.close()
+    # plotfile = 'conduction_v1.png'
+    # print('writing : ',plotfile)    
+    # fig.savefig(plotfile)
+    # plt.close()
     
     
     
