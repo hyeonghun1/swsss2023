@@ -67,7 +67,6 @@ if __name__ == "__main__":
     fig = plt.figure(figsize = (10,10))
     ax = fig.add_subplot(111)
     
-    
     Temperature = np.zeros([len(x), len(times)])
     
     alt_2D, time_2D = np.meshgrid(x, times)
@@ -120,7 +119,7 @@ if __name__ == "__main__":
     plt.close()
     
     
-    plt.contourf(time_2D/24, alt_2D, Temperature.T)
+    plt.contourf(time_2D/24, alt_2D*40 + 100, Temperature.T)
     plt.xlabel('Time (days)')
     plt.ylabel('Altitude')
     plt.xlim([0,3])
