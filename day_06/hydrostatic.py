@@ -13,7 +13,7 @@ alt_0 = 100
 alt_n = 500
 temp_0 = 200
 temp_n = 1000
-m = 28*1.67e-27
+m = [28*1.67e-27, 32*1.67e-27, 16*1.67e-27]
 k = 1.38e-23
 radius_e = 6370  # km
 
@@ -29,7 +29,8 @@ if __name__ == '__main__':
     temp = np.linspace(temp_0, temp_n, num_pts)
     g = 3.99e14 / ((radius_e+alt)*1000)**2
     sc_height = scale_height(temp=(temp[1:]+temp[:-1])/2,
-                             gravity=(g[1:]+g[:-1])/2)
+                             gravity=(g[1:]+g[:-1])/2, mass = m[2])
+
 
     # Calculate
     n = [n_0]
@@ -37,6 +38,7 @@ if __name__ == '__main__':
                                temp[:-1], temp[1:],
                                (alt[1:]-alt[:-1])*1000):
         n += [t_0/t_1 * n[-1] * np.exp(-1*dz/h)]
+
 
     # Plot
     plt.plot(alt, np.log(n))
