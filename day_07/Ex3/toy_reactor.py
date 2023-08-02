@@ -11,8 +11,8 @@ import time
 
 # define adaptive Dormand-Prince stepper
 def adaptive_dormand_prince_stepper(f,x,t,h):
-    return ... # please complete this function 
-               # using rk.adaptive_explicit_RK_stepper
+    return rk.adaptive_explicit_RK_stepper(f, x, t, h, dp.a, dp.b, dp.c, dp.b_control)
+
 
 def reaction_rates(c,k):
     """
